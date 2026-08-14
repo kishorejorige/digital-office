@@ -27,11 +27,17 @@ def home():
 
 
 @app.post("/tasks")
-def create_task(request: TaskRequest):
+def create_task(
+    request: TaskRequest,
+    db: Session = Depends(get_db),
+):
     route = route_task(request.task)
 
     if route == "research":
-        return run_research_agent(request.task)
+        return run_research_agent(
+            request.task,
+            db=db,
+        )
 
     return {
         "task": request.task,
