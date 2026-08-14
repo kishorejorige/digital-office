@@ -71,3 +71,29 @@ class Lead(Base):
         Integer,
         default=0,
     )
+
+class Approval(Base):
+    __tablename__ = "approvals"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
+
+    lead_id: Mapped[int] = mapped_column(
+        Integer,
+        index=True,
+    )
+
+    approval_type: Mapped[str] = mapped_column(
+        String,
+        default="proposal",
+    )
+
+    draft: Mapped[str] = mapped_column(String)
+
+    status: Mapped[str] = mapped_column(
+        String,
+        default="pending",
+    )

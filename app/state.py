@@ -36,3 +36,14 @@ class LeadResponse(LeadCreate):
     model_config = {
         "from_attributes": True,
     }
+
+class ApprovalResponse(BaseModel):
+    id: int
+    lead_id: int
+    approval_type: str
+    draft: str
+    status: str
+
+    model_config = {
+        "from_attributes": True,
+    }

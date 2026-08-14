@@ -7,13 +7,22 @@ from app.graph import route_task
 from app.models import Lead
 from app.state import LeadCreate, LeadResponse, TaskRequest
 
+from fastapi import Depends, FastAPI, HTTPException
+
+from app.agents.email import create_proposal_for_lead
+from app.approvals import (
+    approve_item,
+    list_pending_approvals,
+    reject_item,
+)
+from app.state import ApprovalResponse
 
 Base.metadata.create_all(bind=engine)
 
 
 app = FastAPI(
     title="Digital Office",
-    version="0.3.0",
+    version="0.5.0",
 )
 
 
@@ -22,7 +31,7 @@ def home():
     return {
         "app": "Digital Office",
         "status": "running",
-        "version": "0.3.0",
+        "version": "0.5.0",
     }
 
 
@@ -71,3 +80,78 @@ def list_leads(
     db: Session = Depends(get_db),
 ):
     return db.query(Lead).all()
+
+@app.post(
+    "/leads/{lead_id}/proposal",
+    response_model=ApprovalResponse,
+)
+def create_proposal(
+    lead_id: int,
+    db: Session = Depends(get_db),
+):
+    approval = create_proposal_for_lead(
+        lead_id,
+        db,
+    )
+
+    if approval is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Lead not found",
+        )
+
+    return approval
+
+
+@app.get(
+    "/approvals",
+    response_model=list[ApprovalResponse],
+)
+def get_approvals(
+    db: Session = Depends(get_db),
+):
+    return list_pending_approvals(db)
+
+
+@app.post(
+    "/approvals/{approval_id}/approve",
+    response_model=ApprovalResponse,
+)
+def approve_proposal(
+    approval_id: int,
+    db: Session = Depends(get_db),
+):
+    approval = approve_item(
+        approval_id,
+        db,
+    )
+
+    if approval is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Approval not found",
+        )
+
+    return approval
+
+
+@app.post(
+    "/approvals/{approval_id}/reject",
+    response_model=ApprovalResponse,
+)
+def reject_proposal(
+    approval_id: int,
+    db: Session = Depends(get_db),
+):
+    approval = reject_item(
+        approval_id,
+        db,
+    )
+
+    if approval is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Approval not found",
+        )
+
+    return approval
