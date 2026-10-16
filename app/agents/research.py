@@ -35,17 +35,34 @@ def run_research_agent(
         scored_opportunities.append(scored)
 
         if db is not None and decision == "APPLY":
-            existing_lead = (
-                db.query(Lead)
-                .filter(Lead.title == opportunity["title"])
-                .first()
+            opportunity_url = opportunity.get("url")
+
+            existing_query = db.query(Lead).filter(
+                Lead.source == "Research Agent",
             )
+
+            if opportunity_url:
+                existing_lead = (
+                    existing_query
+                    .filter(Lead.url == opportunity_url)
+                    .first()
+                )
+            else:
+                existing_lead = (
+                    existing_query
+                    .filter(
+                        Lead.url.is_(None),
+                        Lead.title == opportunity["title"],
+                    )
+                    .first()
+                )
 
             if existing_lead is None:
                 lead = Lead(
                     source="Research Agent",
                     title=opportunity["title"],
-                    budget=opportunity["budget"],
+                    url=opportunity_url,
+                    budget=opportunity.get("budget"),
                     fit_score=fit_score,
                     payment_score=payment_score,
                     decision=decision,
