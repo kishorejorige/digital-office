@@ -72,7 +72,11 @@ def run_research_agent(
                 saved_leads += 1
 
     if db is not None:
-        db.commit()
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
 
     scored_opportunities.sort(
         key=lambda item: (
