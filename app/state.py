@@ -1,13 +1,23 @@
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel
-
+from pydantic import BaseModel, Field, StringConstraints
 
 RouteType = Literal["research", "email", "calendar", "unknown"]
 
+NonBlankString = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+    ),
+]
+
 
 class TaskRequest(BaseModel):
-    task: str
+    task: Annotated[
+        NonBlankString,
+        Field(max_length=2000),
+    ]
 
 
 class TaskState(BaseModel):
@@ -15,16 +25,18 @@ class TaskState(BaseModel):
     route: RouteType
     status: str = "accepted"
 
+
 class LeadCreate(BaseModel):
     name: str | None = None
-    source: str
-    title: str
+    source: NonBlankString
+    title: NonBlankString
     description: str | None = None
     url: str | None = None
     budget: str | None = None
-    fit_score: int = 0
-    payment_score: int = 0
+    fit_score: int = Field(default=0, ge=0, le=100)
+    payment_score: int = Field(default=0, ge=0, le=100)
     decision: str = "MAYBE"
+
 
 class LeadResponse(LeadCreate):
     id: int
@@ -36,6 +48,7 @@ class LeadResponse(LeadCreate):
     model_config = {
         "from_attributes": True,
     }
+
 
 class ApprovalResponse(BaseModel):
     id: int
