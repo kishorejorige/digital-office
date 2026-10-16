@@ -1,21 +1,18 @@
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
 
-from app.agents.research import run_research_agent
-from app.database import Base, engine, get_db
-from app.graph import route_task
-from app.models import Lead
-from app.state import LeadCreate, LeadResponse, TaskRequest
-
-from fastapi import Depends, FastAPI, HTTPException
-
 from app.agents.email import create_proposal_for_lead
+from app.agents.research import run_research_agent
 from app.approvals import (
+    InvalidApprovalStateError,
     approve_item,
     list_pending_approvals,
     reject_item,
 )
-from app.state import ApprovalResponse
+from app.database import Base, engine, get_db
+from app.graph import route_task
+from app.models import Lead
+from app.state import ApprovalResponse, LeadCreate, LeadResponse, TaskRequest
 
 Base.metadata.create_all(bind=engine)
 
@@ -121,10 +118,16 @@ def approve_proposal(
     approval_id: int,
     db: Session = Depends(get_db),
 ):
-    approval = approve_item(
-        approval_id,
-        db,
-    )
+    try:
+        approval = approve_item(
+            approval_id,
+            db,
+        )
+    except InvalidApprovalStateError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
 
     if approval is None:
         raise HTTPException(
@@ -143,10 +146,16 @@ def reject_proposal(
     approval_id: int,
     db: Session = Depends(get_db),
 ):
-    approval = reject_item(
-        approval_id,
-        db,
-    )
+    try:
+        approval = reject_item(
+            approval_id,
+            db,
+        )
+    except InvalidApprovalStateError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
 
     if approval is None:
         raise HTTPException(
