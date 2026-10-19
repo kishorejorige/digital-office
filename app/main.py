@@ -24,7 +24,7 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Digital Office",
-    version="0.5.0",
+    version="0.6.0",
 )
 
 
@@ -33,7 +33,7 @@ def home():
     return {
         "app": "Digital Office",
         "status": "running",
-        "version": "0.5.0",
+        "version": "0.6.0",
     }
 
 
