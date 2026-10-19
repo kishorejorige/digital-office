@@ -1,4 +1,7 @@
+import logging
+
 from fastapi import Depends, FastAPI, HTTPException
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.agents.email import create_proposal_for_lead
@@ -13,6 +16,8 @@ from app.database import Base, engine, get_db
 from app.graph import route_task
 from app.models import Lead
 from app.state import ApprovalResponse, LeadCreate, LeadResponse, TaskRequest
+
+logger = logging.getLogger(__name__)
 
 Base.metadata.create_all(bind=engine)
 
@@ -51,20 +56,21 @@ def create_task(
         "status": "accepted",
     }
 
-
-@app.post(
-    "/leads",
-    response_model=LeadResponse,
-)
-def create_lead(
-    lead: LeadCreate,
-    db: Session = Depends(get_db),
-):
+@app.post("/leads", response_model=LeadResponse)
+def create_lead(lead: LeadCreate, db: Session = Depends(get_db)):
     db_lead = Lead(**lead.model_dump())
 
-    db.add(db_lead)
-    db.commit()
-    db.refresh(db_lead)
+    try:
+        db.add(db_lead)
+        db.commit()
+        db.refresh(db_lead)
+    except SQLAlchemyError:
+        db.rollback()
+        logger.exception("Database error while creating lead")
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to create lead due to a database error",
+        ) from None
 
     return db_lead
 
