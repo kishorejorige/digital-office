@@ -3,6 +3,7 @@
 Digital Office is an AI-assisted personal operations system being built to help manage research, freelance opportunities, leads, proposals, approvals, and eventually email and calendar workflows.
 
 Current version: v0.5.0
+Development milestone: v0.6 — Safety & Reliability
 
 ## Overview
 
@@ -150,21 +151,45 @@ The system can create a proposal draft for a lead and then place it into a human
 
 ## Roadmap
 
+## Testing status:
+
+- 29 tests passing.
+
+## Latest verified checks:
+
+- `uv run ruff check . --ignore B008` — passed
+- `uv run pytest` — 29 passed
+- `git diff --check` — passed
+
 ### v0.6 Safety & Reliability
 
-- stronger duplicate protection
-- approval state safety
-- validation and API tests
-- Alembic migrations
-- secure configuration
+Completed:
+- Research lead duplicate protection
+- Approval state safety and conflict handling
+- API input validation and validation tests
+- Research persistence and error-handling tests
+- Database transaction rollback when research persistence fails
+- Generic API error responses for database failures during lead creation
+- Structured server-side exception logging for lead creation failures
+
+Remaining:
+- Alembic database migrations
+- Secure configuration and secrets management
+- Review error handling across the remaining database-writing operations
+
+Latest verified test suite: **29 passed**.
+
+Latest database error-handling commit: `c0feb81`.
 
 ### Next expansion
 
 - React dashboard
-- real research sources
+- Real research sources
 - Gmail integration
 - Calendar integration
-- eventual v1.0 deployable Digital Office
+- Eventual v1.0 deployable Digital Office
+
+External integrations must remain disabled until security, approval safeguards, and validation are ready.
 
 ## Notes
 
