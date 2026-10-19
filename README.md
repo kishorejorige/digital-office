@@ -2,7 +2,7 @@
 
 Digital Office is an AI-assisted personal operations system being built to help manage research, freelance opportunities, leads, proposals, approvals, and eventually email and calendar workflows.
 
-Current version: v0.5.0
+Current version: v0.6.0
 Development milestone: v0.6 — Safety & Reliability
 
 ## Overview
@@ -149,37 +149,34 @@ The system can create a proposal draft for a lead and then place it into a human
 - SQLite local persistence
 - session-based request handling
 
+## Testing status
+
+Latest verified results:
+- `uv run ruff check . --ignore B008` - passed
+- `uv run pytest` - 29 passed
+- `git diff --check` - passed
+
+Latest verified test run: 29 passed, 1 deprecation warning.
+
 ## Roadmap
-
-## Testing status:
-
-- 29 tests passing.
-
-## Latest verified checks:
-
-- `uv run ruff check . --ignore B008` — passed
-- `uv run pytest` — 29 passed
-- `git diff --check` — passed
 
 ### v0.6 Safety & Reliability
 
-Completed:
+**Completed:**
 - Research lead duplicate protection
 - Approval state safety and conflict handling
 - API input validation and validation tests
 - Research persistence and error-handling tests
 - Database transaction rollback when research persistence fails
 - Generic API error responses for database failures during lead creation
-- Structured server-side exception logging for lead creation failures
+- Server-side exception logging for lead creation failures
 
-Remaining:
+**Remaining:**
 - Alembic database migrations
 - Secure configuration and secrets management
 - Review error handling across the remaining database-writing operations
 
-Latest verified test suite: **29 passed**.
-
-Latest database error-handling commit: `c0feb81`.
+Database error-handling implementation commit: `c0feb81`.
 
 ### Next expansion
 
@@ -190,9 +187,3 @@ Latest database error-handling commit: `c0feb81`.
 - Eventual v1.0 deployable Digital Office
 
 External integrations must remain disabled until security, approval safeguards, and validation are ready.
-
-## Notes
-
-This project is intentionally simple and designed as a prototype for experimentation and portfolio work. It is not yet a production-grade system for external integrations or real customer data.
-
-The next major milestones are security, validation, and governance around approvals and external service access before Gmail, Calendar, or live research integrations are enabled.
