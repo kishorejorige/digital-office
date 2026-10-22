@@ -92,10 +92,17 @@ def create_proposal(
     lead_id: int,
     db: Session = Depends(get_db),
 ):
-    approval = create_proposal_for_lead(
-        lead_id,
-        db,
-    )
+    try:
+        approval = create_proposal_for_lead(
+            lead_id,
+            db,
+        )
+    except SQLAlchemyError:
+        logger.exception("Database error while creating proposal")
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to create proposal due to a database error",
+        ) from None
 
     if approval is None:
         raise HTTPException(
@@ -115,7 +122,6 @@ def get_approvals(
 ):
     return list_pending_approvals(db)
 
-
 @app.post(
     "/approvals/{approval_id}/approve",
     response_model=ApprovalResponse,
@@ -134,6 +140,12 @@ def approve_proposal(
             status_code=409,
             detail=str(exc),
         ) from exc
+    except SQLAlchemyError:
+        logger.exception("Database error while approving proposal")
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to update approval due to a database error",
+        ) from None
 
     if approval is None:
         raise HTTPException(
@@ -162,6 +174,12 @@ def reject_proposal(
             status_code=409,
             detail=str(exc),
         ) from exc
+    except SQLAlchemyError:
+        logger.exception("Database error while rejecting proposal")
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to update approval due to a database error",
+        ) from None
 
     if approval is None:
         raise HTTPException(

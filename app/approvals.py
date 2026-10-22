@@ -1,4 +1,4 @@
-
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.models import Approval
@@ -44,33 +44,41 @@ def approve_item(
     approval_id: int,
     db: Session,
 ) -> Approval | None:
-    approval = _get_approval(approval_id, db)
+    try:
+        approval = _get_approval(approval_id, db)
 
-    if approval is None:
-        return None
+        if approval is None:
+            return None
 
-    _require_pending(approval)
+        _require_pending(approval)
 
-    approval.status = "approved"
-    db.commit()
-    db.refresh(approval)
+        approval.status = "approved"
+        db.commit()
+        db.refresh(approval)
 
-    return approval
+        return approval
+    except SQLAlchemyError:
+        db.rollback()
+        raise
 
 
 def reject_item(
     approval_id: int,
     db: Session,
 ) -> Approval | None:
-    approval = _get_approval(approval_id, db)
+    try:
+        approval = _get_approval(approval_id, db)
 
-    if approval is None:
-        return None
+        if approval is None:
+            return None
 
-    _require_pending(approval)
+        _require_pending(approval)
 
-    approval.status = "rejected"
-    db.commit()
-    db.refresh(approval)
+        approval.status = "rejected"
+        db.commit()
+        db.refresh(approval)
 
-    return approval
+        return approval
+    except SQLAlchemyError:
+        db.rollback()
+        raise
