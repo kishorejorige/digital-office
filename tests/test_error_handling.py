@@ -240,3 +240,52 @@ def test_approval_endpoint_returns_generic_error_when_commit_fails(
     assert response.status_code == 500
     assert "database failure" not in response.text.lower()
     rollback.assert_called_once()
+
+def test_list_leads_returns_generic_error_when_response_validation_fails(api_client):
+    client = api_client
+    previous_override = app.dependency_overrides.get(get_db)
+
+    engine = create_engine(
+        'sqlite://',
+        connect_args={'check_same_thread': False},
+        poolclass=StaticPool,
+    )
+    TestingSessionLocal = sessionmaker(
+        autocommit=False,
+        autoflush=False,
+        bind=engine,
+    )
+    Base.metadata.create_all(bind=engine)
+
+    db = TestingSessionLocal()
+    try:
+        lead = Lead(
+            source='',
+            title='Valid title',
+        )
+        db.add(lead)
+        db.commit()
+    finally:
+        db.close()
+
+    def override_get_db():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    try:
+        response = client.get('/leads')
+    finally:
+        if previous_override is None:
+            app.dependency_overrides.pop(get_db, None)
+        else:
+            app.dependency_overrides[get_db] = previous_override
+        Base.metadata.drop_all(bind=engine)
+        engine.dispose()
+
+    assert response.status_code == 500
+    assert 'unable to list leads' in response.text.lower()

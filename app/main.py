@@ -1,6 +1,8 @@
 import logging
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.exceptions import ResponseValidationError
+from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -82,7 +84,18 @@ def create_lead(lead: LeadCreate, db: Session = Depends(get_db)):
 def list_leads(
     db: Session = Depends(get_db),
 ):
-    return db.query(Lead).all()
+    leads = db.query(Lead).all()
+    try:
+        return [
+            LeadResponse.model_validate(lead, from_attributes=True)
+            for lead in leads
+        ]
+    except (ResponseValidationError, ValidationError):
+        logger.exception("Response validation error while listing leads")
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to list leads due to invalid data",
+        ) from None
 
 @app.post(
     "/leads/{lead_id}/proposal",
