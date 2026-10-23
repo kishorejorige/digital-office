@@ -17,6 +17,7 @@ from app.approvals import (
 )
 from app.database import Base, engine, get_db
 from app.graph import route_task
+from app.memory.routes import router as memories_router
 from app.models import Lead
 from app.state import ApprovalResponse, LeadCreate, LeadResponse, TaskRequest
 
@@ -29,6 +30,8 @@ app = FastAPI(
     title="Digital Office",
     version="0.6.0",
 )
+
+app.include_router(memories_router)
 
 app.add_middleware(
     CORSMiddleware,
