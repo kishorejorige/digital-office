@@ -2,6 +2,7 @@ import logging
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.exceptions import ResponseValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -27,6 +28,14 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Digital Office",
     version="0.6.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
