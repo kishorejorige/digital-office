@@ -279,3 +279,60 @@ def test_db_retrieval_failure_triggers_safe_rollback_and_fallback():
             research_memory.search_memories = orig_search
     finally:
         teardown_app_db(engine)
+
+
+def test_research_persists_lead_after_retrieval_sqlalchemy_error_with_session_rollback():
+    engine, TestingSessionLocal = setup_app_db()
+    try:
+        client = TestClient(app)
+
+        class FailingSearchClient:
+            def embed(self, text: str) -> EmbeddingResult:
+                return EmbeddingResult(
+                    vector=(0.1, 0.2, 0.3),
+                    model="nomic-embed-text:latest",
+                    dimension=3,
+                )
+
+        orig_search = research_memory.search_memories
+        orig_retriever = research_memory._default_retriever
+
+        def failing_search(*args, **kwargs):
+            raise SQLAlchemyError("db failure")
+
+        research_memory.search_memories = failing_search
+        retriever = research_memory.ResearchMemoryRetriever(embedding_client=FailingSearchClient())
+        research_memory._default_retriever = retriever
+        try:
+            response = client.post(
+                "/tasks",
+                json={"task": "Find freelance Python automation opportunities"},
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["agent"] == "research"
+            assert data["status"] == "completed"
+            mr = data["memory_retrieval"]
+            assert mr["status"] == "unavailable"
+            assert mr["count"] == 0
+            assert mr["memories"] == []
+            assert data["saved_leads"] >= 1
+            assert data["count"] == 3
+            assert len(data["opportunities"]) == 3
+
+            check_db = TestingSessionLocal()
+            try:
+                from app.models import Lead
+
+                leads = check_db.query(Lead).all()
+                assert len(leads) >= 1
+                lead = leads[0]
+                assert lead.source == "Research Agent"
+                assert lead.title
+            finally:
+                check_db.close()
+        finally:
+            research_memory.search_memories = orig_search
+            research_memory._default_retriever = orig_retriever
+    finally:
+        teardown_app_db(engine)
