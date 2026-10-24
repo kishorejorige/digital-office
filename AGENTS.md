@@ -25,13 +25,13 @@ Verify order: lint → test.
 
 ## Architecture
 - Entrypoint: `app.main:app`. Root `main.py` is a leftover `uv init` stub (ignore).
-- Flow: `POST /tasks` → `app/graph.py:route_task` (substring keyword match; research checked before email before calendar) → only `"research"` goes to `app/agents/research.py:run_research_agent`. `email`/`calendar`/`unknown` return `{task, route, status: "accepted"}` (no email/calendar agents wired). Research response is the agent dict (`agent`, `count`, `saved_leads`, `opportunities`) with **no** `route` key.
+- Flow: `POST /tasks` → `app/graph.py:route_task` (substring keyword match; research checked before email before calendar) → only `"research"` goes to `app/agents/research.py:run_research_agent`. `email`/`calendar`/`unknown` return `{task, route, status: "accepted"}` (no email/calendar agents wired). Research response is the agent dict (`agent`, `count`, `saved_leads`, `opportunities`) with **no** `route` key. For research, `app/research_memory.py` retrieves metadata before the agent and attaches `memory_retrieval` to the response (bounded refs only; no content/embeddings). Retrieval failures fall back to `unavailable` without blocking research.
 - Layers: `app/tools/*` (pure scoring/draft), `app/agents/*` (orchestration + DB writes), `app/approvals.py` (approval state machine), `app/memory/*` (semantic memory; separate from task routing), `app/state.py` (Pydantic schemas + `RouteType`), `app/models.py` (SQLAlchemy models), `app/database.py` (engine/session/`get_db`).
 - Research data is fake (`app/tools/research_tools.py:get_sample_opportunities()` hardcoded 3; `USER_SKILLS` hardcoded). No scraping/LLM/network.
-- Memory is exposed only through `/memories*` routes; it is not wired into task routing, agents, prompts, or tools.
+- Memory is exposed only through `/memories*` routes; retrieval is integrated only for research route as read-only metadata (not injected into agents/prompts/tools).
 
 ## Memory architecture
-- `app/memory/config.py`: `OLLAMA_BASE_URL` (default `http://127.0.0.1:11434`, http loopback only, no credentials/path/query/fragment), `OLLAMA_EMBEDDING_MODEL` (default `nomic-embed-text:latest`), and connect/read/write/pool timeouts (defaults `2/30/10/2s`, each >0 and ≤300s). Configuration is read from process env at startup; no `.env` loader.
+- `app/memory/config.py`: `OLLAMA_BASE_URL` (default `http://127.0.0.1:11434`, http loopback only, no credentials/path/query/fragment), `OLLAMA_EMBEDDING_MODEL` (default `nomic-embed-text:latest`), and connect/read/write/pool timeouts (defaults `2/30/10/2s`, each >0 and ≤300s). `RESEARCH_MEMORY_MIN_SCORE` (default `0.0`, valid range `-1.0` through `1.0` inclusive; invalid values fail config validation). Configuration is read from process env at startup; no `.env` loader.
 - `app/memory/embeddings.py`: lazy Ollama `/api/embed` client; `trust_env=False`; sends only the configured loopback endpoint; requires exactly one finite vector of at most 4,096 dimensions; maps transport/model/response failures to memory embedding errors.
 - `app/memory/vectors.py`: float32 encoding/decoding, finite/range validation, norm, and cosine similarity. Stored vectors/norms are never returned by the API.
 - `app/memory/schemas.py`: memory create/update/response, list-query, and search schemas. `MemoryUpdate` rejects explicit `source: null`; omitted source is allowed.
@@ -68,7 +68,7 @@ Scoped to `source == "Research Agent"`: match by `url` if present, else by `titl
 ## Testing conventions
 - No `conftest.py`. Each test file builds its own in-memory SQLite engine (`sqlite://` + `StaticPool` + `check_same_thread=False`) and overrides `app.dependency_overrides[get_db]`. Fixture shapes vary (e.g. `api_client` alone in `tests/test_error_handling.py`, `(client, session_factory)` in `tests/test_approval_api.py`, `client` in `tests/test_input_validation.py`) — copy the local pattern.
 - Failure-path tests patch session instance (`patch.object(db, "commit")`/`monkeypatch.setattr(db, "commit", ...)`) or class (`patch("sqlalchemy.orm.Session.commit")`) and assert rollback and/or no persisted rows.
-- Memory tests must not import `app.main` (it creates the real DB). Use isolated `sqlite://` or temp-file engines, override `get_db`, and inject a fake embedding client; never call Ollama or other network services.
+- Memory tests must not import `app.main` (it creates the real DB). Use isolated `sqlite://` or temp-file engines, override `get_db`, and inject a fake embedding client; never call Ollama or other network services. For memory/research integration tests, set `DIGITAL_OFFICE_SKIP_DB_CREATE=1` before importing `app.main` to avoid import-time initialization of the default engine.
 - API tests use `fastapi.testclient.TestClient`; clear dependency overrides in a `finally` block.
 - `pytest-asyncio` installed but no async tests; `asyncio_mode` unset (strict) — async tests need explicit `@pytest.mark.asyncio`.
 

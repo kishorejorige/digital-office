@@ -45,7 +45,7 @@ The task flow is intentionally simple:
 5. Valid leads are saved to SQLite.
 6. Proposals move into a human approval queue.
 
-Memory is a separate feature. It is not wired into task routing, agents, prompts, or tool execution.
+Memory is a separate feature. For research tasks, semantic memory retrieval runs before the research agent and the task response includes `memory_retrieval` with `status` (`success`/`no_matches`/`unavailable`), `count`, and bounded references containing only `id`, `title`, `score`, and `trust`. Retrieved content and embeddings are not included. Archived memories are excluded. If retrieval fails for expected reasons, research still completes with `memory_retrieval.status: "unavailable"`. Unrelated routes are unaffected and memory is not injected into prompts or tools.
 
 ## Project structure
 
@@ -295,7 +295,7 @@ The system can create a proposal draft for a lead and then place it into a human
 - Changing embedding models can make existing memories unavailable to search until manually re-embedded.
 - Search scores stored embeddings in application code; there is no external vector database or approximate-nearest-neighbor index.
 - The SQLite database is local and unencrypted.
-- Memory retrieval is not integrated into task routing, agents, prompts, or tools.
+- Memory retrieval is integrated only for the research route (read-only metadata attached to the research response). It is not injected into agents, prompts, or tools.
 - Gmail and Calendar integrations remain disabled.
 - Research data remains sample data; there is no scraping or external research provider.
 
