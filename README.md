@@ -242,6 +242,7 @@ Configuration is read from process environment variables at startup. Changes req
 | `OLLAMA_READ_TIMEOUT_SECONDS` | `30.0` | Greater than 0 and at most 300 seconds |
 | `OLLAMA_WRITE_TIMEOUT_SECONDS` | `10.0` | Greater than 0 and at most 300 seconds |
 | `OLLAMA_POOL_TIMEOUT_SECONDS` | `2.0` | Greater than 0 and at most 300 seconds |
+| `RESEARCH_MEMORY_MIN_SCORE` | `0.0` | Finite number from -1.0 through 1.0, inclusive; invalid values fail configuration validation. Used as the minimum cosine similarity score for semantic-memory retrieval in research tasks. |
 
 Embedding responses must contain exactly one finite vector with no more than 4,096 dimensions. Vectors are stored as float32 values.
 

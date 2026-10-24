@@ -3,7 +3,7 @@ import logging
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.memory.config import DEFAULT_CONFIG
+from app.memory.config import DEFAULT_CONFIG, RESEARCH_MEMORY_MIN_SCORE
 from app.memory.embeddings import OllamaEmbeddingClient
 from app.memory.service import (
     MemoryEmbeddingUnavailableError,
@@ -14,12 +14,14 @@ from app.memory.service import (
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MIN_SCORE = 0.0
+DEFAULT_MIN_SCORE = RESEARCH_MEMORY_MIN_SCORE
 DEFAULT_MAX_RESULTS = 5
 
 
 class ResearchMemoryRetriever:
-    def __init__(self, embedding_client=None, min_score: float = DEFAULT_MIN_SCORE, max_results: int = DEFAULT_MAX_RESULTS):
+    def __init__(self, embedding_client=None, min_score: float | None = None, max_results: int = DEFAULT_MAX_RESULTS):
+        if min_score is None:
+            min_score = RESEARCH_MEMORY_MIN_SCORE
         self.embedding_client = embedding_client
         self.min_score = min_score
         self.max_results = max_results
@@ -70,7 +72,7 @@ class ResearchMemoryRetriever:
                 db.rollback()
             except SQLAlchemyError:
                 logger.warning("Failed to roll back after research memory database error")
-            logger.exception("Database error while retrieving research memories")
+            logger.warning("Database error while retrieving research memories")
             return {
                 "status": "unavailable",
                 "count": 0,

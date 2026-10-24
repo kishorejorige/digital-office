@@ -29,9 +29,51 @@ MAX_TOP_K = 50
 DEFAULT_PAGE_SIZE = 20
 MAX_PAGE_SIZE = 100
 
+DEFAULT_RESEARCH_MEMORY_MIN_SCORE = 0.0
+MIN_RESEARCH_MEMORY_MIN_SCORE = -1.0
+MAX_RESEARCH_MEMORY_MIN_SCORE = 1.0
+
 
 class ConfigurationError(ValueError):
     pass
+
+
+def _validate_research_min_score(
+    value: float | str | None,
+    *,
+    name: str = "RESEARCH_MEMORY_MIN_SCORE",
+) -> float:
+    if value is None:
+        return DEFAULT_RESEARCH_MEMORY_MIN_SCORE
+
+    if isinstance(value, bool):
+        raise ConfigurationError(f"{name} must be a number between -1.0 and 1.0")
+
+    if isinstance(value, str):
+        raw = value.strip()
+        if raw == "":
+            raise ConfigurationError(f"{name} must be a number between -1.0 and 1.0")
+        try:
+            score = float(raw)
+        except (TypeError, ValueError) as exc:
+            raise ConfigurationError(
+                f"{name} must be a number between -1.0 and 1.0",
+            ) from exc
+    else:
+        try:
+            score = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ConfigurationError(
+                f"{name} must be a number between -1.0 and 1.0",
+            ) from exc
+
+    if not math.isfinite(score):
+        raise ConfigurationError(f"{name} must be a number between -1.0 and 1.0")
+
+    if score < MIN_RESEARCH_MEMORY_MIN_SCORE or score > MAX_RESEARCH_MEMORY_MIN_SCORE:
+        raise ConfigurationError(f"{name} must be between -1.0 and 1.0")
+
+    return float(score)
 
 
 def _validate_timeout(
@@ -241,7 +283,16 @@ def load_config(
     )
 
 
+def load_research_config(
+    environ: Mapping[str, str] | None = None,
+) -> float:
+    source = os.environ if environ is None else environ
+    value = source.get("RESEARCH_MEMORY_MIN_SCORE")
+    return _validate_research_min_score(value)
+
+
 DEFAULT_CONFIG = load_config()
+RESEARCH_MEMORY_MIN_SCORE = load_research_config()
 
 OLLAMA_BASE_URL = DEFAULT_CONFIG.base_url
 OLLAMA_EMBEDDING_MODEL = DEFAULT_CONFIG.embedding_model
