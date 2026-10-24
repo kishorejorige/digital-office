@@ -1,4 +1,5 @@
 import logging
+import os
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.exceptions import ResponseValidationError
@@ -19,11 +20,13 @@ from app.database import Base, engine, get_db
 from app.graph import route_task
 from app.memory.routes import router as memories_router
 from app.models import Lead
+from app.research_memory import retrieve_research_memories
 from app.state import ApprovalResponse, LeadCreate, LeadResponse, TaskRequest
 
 logger = logging.getLogger(__name__)
 
-Base.metadata.create_all(bind=engine)
+if os.environ.get("DIGITAL_OFFICE_SKIP_DB_CREATE") != "1":
+    Base.metadata.create_all(bind=engine)
 
 
 app = FastAPI(
@@ -59,10 +62,13 @@ def create_task(
     route = route_task(request.task)
 
     if route == "research":
-        return run_research_agent(
+        memory_retrieval = retrieve_research_memories(db, request.task)
+        result = run_research_agent(
             request.task,
             db=db,
         )
+        result["memory_retrieval"] = memory_retrieval
+        return result
 
     return {
         "task": request.task,
